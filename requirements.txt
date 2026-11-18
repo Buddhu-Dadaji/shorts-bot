@@ -1,0 +1,5 @@
+edge-tts
+requests
+groq
+google-api-python-client
+google-auth
