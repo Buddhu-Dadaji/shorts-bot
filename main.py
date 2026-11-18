@@ -49,6 +49,9 @@ def next_topic(state):
     raise SystemExit("no unused topics")
 
 
+REQUIRED = ("hook", "script", "title", "description", "tags", "queries")
+
+
 def write_script(topic):
     client = Groq(api_key=os.environ["GROQ_API_KEY"])
     prompt = (
@@ -60,17 +63,31 @@ def write_script(topic):
         "tags (array of 8 short strings), "
         "queries (array of 3 stock-footage search terms, 1-3 words each)."
     )
-    r = client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.9,
-        max_tokens=900,
-    )
-    txt = r.choices[0].message.content
-    m = re.search(r"\{.*\}", txt, re.S)
-    if not m:
-        raise SystemExit("model did not return JSON:\n" + txt)
-    return json.loads(m.group(0))
+    errors = []
+    for model in MODELS:
+        for use_json in (True, False):
+            try:
+                kw = {"response_format": {"type": "json_object"}} if use_json else {}
+                r = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.9,
+                    max_tokens=2000,
+                    **kw,
+                )
+                txt = (r.choices[0].message.content or "").strip()
+                m = re.search(r"\{.*\}", txt, re.S)
+                if not m:
+                    errors.append(f"{model}: no JSON ({txt[:100]!r})")
+                    continue
+                data = json.loads(m.group(0))
+                if all(k in data for k in REQUIRED):
+                    print("model:", model)
+                    return data
+                errors.append(f"{model}: missing keys")
+            except Exception as e:
+                errors.append(f"{model}: {type(e).__name__} {str(e)[:100]}")
+    raise SystemExit("all models failed:\n" + "\n".join(errors))
 
 
 async def make_voice(text):
