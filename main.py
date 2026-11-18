@@ -14,7 +14,9 @@ TOPICS = ROOT / "topics.txt"
 WORK = Path(tempfile.mkdtemp())
 W, H, FPS = 1080, 1920, 30
 VOICE = os.getenv("VOICE", "en-US-ChristopherNeural")
-MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+MODELS = [m for m in (os.getenv("GROQ_MODEL"), "openai/gpt-oss-120b",
+          "llama-3.3-70b-versatile", "qwen/qwen3-32b",
+          "meta-llama/llama-4-scout-17b-16e-instruct") if m]
 DRY = os.getenv("DRY_RUN", "false").lower() == "true"
 CREDITS = []
 
